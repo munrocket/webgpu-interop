@@ -1,0 +1,7 @@
+.DS_Store
+.dart_tool/
+pubspec.lock
+
+generator/web
+generator/dart-sdk
+test
