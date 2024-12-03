@@ -1,5 +1,5 @@
 .dart_tool
-generator
+gen
 test
 analysis_options.yaml
 pubspec.lock
