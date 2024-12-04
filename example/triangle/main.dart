@@ -5,23 +5,21 @@ import 'package:webgpu_interop/webgpu_interop.dart';
 late GPUDevice? device;
 
 void main(List<String> args) async {
-  print('drawing triangle with webgpu...');
-
-  var gpu = window.navigator.gpu;
+  final gpu = window.navigator.gpu;
   if (gpu == null) {
     print('navigator.gpu not exist!');
     return;
   }
 
-  var adapter = await gpu!.requestAdapter().toDart;
-  var device = await adapter!.requestDevice().toDart;
+  final adapter = await gpu.requestAdapter().toDart;
+  final device = await adapter!.requestDevice().toDart;
   if (device == null) {
     print('webgpu device not exist!');
     return;
   }
 
-  var canvas = document.getElementById('canvas') as HTMLCanvasElement;
-  var context = canvas.getContext('webgpu') as GPUCanvasContext?;
+  final canvas = document.getElementById('canvas') as HTMLCanvasElement;
+  final context = canvas.getContext('webgpu') as GPUCanvasContext?;
   if (context == null) {
     print('webgpu context not exist!');
     return;
@@ -29,32 +27,32 @@ void main(List<String> args) async {
   canvas.height = (canvas.clientHeight * window.devicePixelRatio) as int;
   canvas.width = (canvas.clientWidth * window.devicePixelRatio) as int;
 
-  var format = window.navigator.gpu!.getPreferredCanvasFormat();
-  context!.configure(GPUCanvasConfiguration(
+  final format = window.navigator.gpu!.getPreferredCanvasFormat();
+  context.configure(GPUCanvasConfiguration(
     device: device,
     format: format,
   ));
 
-  var module = device.createShaderModule(GPUShaderModuleDescriptor(
-    label: 'our hardcoded red triangle shaders',
+  final module = device.createShaderModule(GPUShaderModuleDescriptor(
+    label: 'red triangle shaders',
     code: '''
-      @vertex fn vs(
-        @builtin(vertex_index) vertexIndex : u32
-      ) -> @builtin(position) vec4f {
+      @vertex
+      fn vs(@builtin(vertex_index) VertexIndex : u32) -> @builtin(position) vec4f {
         var pos = array<vec2f, 3>(
-          vec2f( 0.0,  0.5),  // top center
-          vec2f(-0.5, -0.5),  // bottom left
-          vec2f( 0.5, -0.5)   // bottom right
+          vec2(0.0, 0.5),
+          vec2(-0.5, -0.5),
+          vec2(0.5, -0.5)
         );
-        return vec4f(pos[vertexIndex], 0.0, 1.0);
+        return vec4f(pos[VertexIndex], 0.0, 1.0);
       }
-      @fragment fn fs() -> @location(0) vec4f {
+      @fragment
+      fn fs() -> @location(0) vec4f {
         return vec4f(1.0, 0.0, 0.0, 1.0);
       }
     ''',
   ));
 
-  var pipeline = device.createRenderPipeline(GPURenderPipelineDescriptor(
+  final pipeline = device.createRenderPipeline(GPURenderPipelineDescriptor(
     label: 'our hardcoded red triangle pipeline',
     layout: 'auto' as JSAny,
     vertex: GPUVertexState(
@@ -64,33 +62,37 @@ void main(List<String> args) async {
     fragment: GPUFragmentState(
       module: module,
       entryPoint: 'fs',
-      targets: [ // Changed from JSArray to a Dart list
+      targets: [
         GPUColorTargetState(format: format)
       ] as JSArray<GPUColorTargetState>,
     ),
   ));
 
   var color = GPURenderPassColorAttachment(
-    view: context!.getCurrentTexture().createView(),
+    view: context.getCurrentTexture().createView(),
     clearValue: [0.3, 0.3, 0.3, 1] as JSObject,
     loadOp: 'clear',
     storeOp: 'store',
   );
-  var renderPassDescriptor = GPURenderPassDescriptor(
+  final renderPassDescriptor = GPURenderPassDescriptor(
     label: 'our basic canvas renderPass',
     colorAttachments: [
       color,
     ] as JSArray<GPURenderPassColorAttachment>,
   );
 
+  print('drawing triangle with webgpu...');
+
   void render() {
-    var encoder = device.createCommandEncoder(GPUCommandEncoderDescriptor(label: 'our encoder'));
-    var pass = encoder.beginRenderPass(renderPassDescriptor);
+    final encoder = device.createCommandEncoder(
+      GPUCommandEncoderDescriptor(label: 'our encoder')
+    );
+    final pass = encoder.beginRenderPass(renderPassDescriptor);
     pass.setPipeline(pipeline);
-    pass.draw(3);  // call our vertex shader 3 times
+    pass.draw(3);
     pass.end();
 
-    var commandBuffer = encoder.finish();
+    final commandBuffer = encoder.finish();
     device.queue.submit([commandBuffer] as JSArray<GPUCommandBuffer>);
   }
 
